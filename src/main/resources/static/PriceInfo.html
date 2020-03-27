@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Insert title here</title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+<style type="text/css">
+	.wrap-loading{
+		position:fixed;
+		left:0;
+		right:0;
+		top:0;
+		bottom:0;
+		background:rgba(0,0,0,0,2);
+/* 		filter:progid:XDImageTransform.Microsoft.Gradient(startColorstr='#20000000','endColorstr='#20000000'); */
+	}
+	.wrap-loading div{
+		position:fixed;
+		top:50%;
+		left:50%;
+		margin-left:-21px;
+		margin-top:21px;
+	}
+	.display-none{
+		display:none;
+	}
+	.high_light{
+/* 		color:white; */
+		background-color:lightgray;
+	}
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript"src="/jquery-ui-1.12.1/jquery-ui.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+	var arr;
+	var totalCnt;
+	var arrGu = [];
+	var row = [];
+	var searchRow = [];
+	var selNm;
+	var stIdx = 1;
+	var edIdx = 100;
+	var sggNmArr = [
+		"강남구", "강동구", "강북구", "관악구", "광진구", "구로구", "금천구", "노원구", "도봉구"
+		, "동대문구", "동작구", "마포구", "서대문구", "서초구", "성동구", "성북구", "송파구", "양천구"
+		, "영등포구", "용산구", "은평구", "종로구", "중구", "중랑구"
+	];
+	function printSggNmArr(){
+		var selSggNm = $("<select/>").attr("id", "sggNm");
+		$.each(sggNmArr, function(idx, sggNm){
+			var option = $("<option/>").text(sggNm).attr("value", sggNm);
+			$(selSggNm).append(option);
+			
+		});
+		$(selSggNm).change(function(){
+			searchRow = [];
+			selNm = $(this).val();
+	 		$.each(row, function(idx, item){
+// 	 			console.log(row[idx].SGG_NM + "/" + selNm);
+	 			if(row[idx].SGG_NM == selNm){
+	 				searchRow.push(row[idx]);
+	 			}
+	 		});
+	 		printInfo(searchRow);
+		});
+		var lblLoc = $("<label/>").text("지역선택");
+		$("#searchCondition").append(lblLoc, selSggNm);
+	}
+	printSggNmArr();
+	
+	
+	
+	function getInfoAll(stIdx, edIdx){
+		idx = {stIdx:stIdx, edIdx:edIdx}; 
+		$.ajax("getActualPriceInfoAll", {data:idx, success:function(data){
+			arr = JSON.parse(data);
+			totalCnt = arr.landActualPriceInfo.list_total_count;
+			console.log(totalCnt);
+			row = arr.landActualPriceInfo.row;
+			row.sort(function(a, b){
+				return a.SGG_NM < b.SGG_NM ? -1 : a.SGG_NM > b.SGG_NM ? 1 : 0;
+			});
+			printInfo(row);
+		}, beforeSend:function(){
+			$(".wrap-loading").removeClass("display-none");
+		}, complete:function(){
+			$(".wrap-loading").addClass("display-none");
+		}});
+	};
+	getInfoAll(stIdx, edIdx);
+	
+	function printInfo(dataArr){
+		$("#list tr").remove();
+		if(dataArr.length == 0){
+			console.log(dataArr.length);
+			return;
+		}
+		var price = new Intl.NumberFormat();
+		var area = new Intl.NumberFormat('ko-kr', {maximunFractionDigits:2});
+		$.each(dataArr, function(idx, item){
+// 			var tr = $("<tr/>").addClass("info");
+			var tr = $("<tr/>");
+			var tdBldgNm = $("<td/>").text(item["BLDG_NM"]);
+			var tdBldgMuseNm = $("<td/>").text(item.BLDG_MUSE_NM);
+			var tdSggNm = $("<td/>").text(item.SGG_NM);
+			var tdBjdongNm = $("<td/>").text(item.BJDONG_NM);
+			var tdBuildYear = $("<td/>").text(item.BUILD_YEAR);
+			var bldgarea = parseFloat(item.BLDG_AREA);
+			var tdBldgArea = $("<td/>").text(area.format(bldgarea));
+			var objamt = parseInt(item.OBJ_AMT) / 10000;
+			var tdDealYmd = $("<td/>").text(item.DEAL_YMD);
+			var tdObjAmt = $("<td/>").text(price.format(objamt));
+			var tdFlrInfo = $("<td/>").text(item.FLR_INFO);
+			
+			$(tr).append(tdBldgNm, tdBldgMuseNm, tdSggNm, tdBjdongNm, tdBuildYear, tdBldgArea, tdDealYmd, tdObjAmt, tdFlrInfo);
+			$(tr).fadeOut(1);
+			$(tr).show().fadeIn("slow");
+			$(tr).hover(function(){
+				$(this).addClass("high_light", 200);
+			}, function(){
+				$(this).removeClass("high_light", 200);
+			});
+			$("#list").append(tr);
+// 			$("#list").append(tr).fadeOut("slow").show().fadeIn("slow");
+		});
+	};
+	
+});
+</script>
+</head>
+<body>
+	<div id="searchCondition"></div>
+	<div class="wrap-loading display-none">
+		<div><img src="loading.gif" width="30%" height="30%"/></div>
+	</div>
+	<div class="container">
+		<table class="table">
+			<thead>
+				<tr>
+					<th>건물명</th>
+					<th>주거형태</th>
+					<th>자치구명</th>
+					<th>법정동명</th>
+					<th>준공년도</th>
+					<th>전용면적</th>
+					<th>계약일</th>
+					<th>거래금액</th>
+					<th>층수</th>
+				</tr>
+			</thead>
+		</table>
+		<table class="table" id="list">
+			<tbody></tbody>
+		</table>
+	</div>
+</body>
+</html>
